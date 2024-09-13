@@ -15,6 +15,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 @EnableWebSecurity
@@ -37,16 +39,26 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return new BCryptPasswordEncoder();
     }
 
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("https://examination-system-frontend.vercel.app")
+                        .allowedMethods("*") // Allows all HTTP methods
+                        .allowedHeaders("*");
+            }
+        };
+    }
+
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-
-        http.cors();
-        http.csrf().disable()
-                .authorizeRequests()
-
-                .antMatchers("/api/register").permitAll()
-                .antMatchers("/api/login").permitAll()
-
+        http.cors()
+            .and()
+            .csrf().disable()
+            .authorizeRequests()
+                .antMatchers("/api/register", "/api/login").permitAll()
                 .antMatchers(HttpMethod.POST, "/api/category/**").hasAuthority("ADMIN")
                 .antMatchers(HttpMethod.GET, "/api/category/**").hasAnyAuthority("USER", "ADMIN")
                 .antMatchers(HttpMethod.PUT, "/api/category/**").hasAuthority("ADMIN")
@@ -66,10 +78,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers(HttpMethod.GET, "/api/quizResult/all/**").hasAuthority("ADMIN")
                 .antMatchers(HttpMethod.GET, "/api/quizResult/**").hasAnyAuthority("USER", "ADMIN")
 
-                .anyRequest().permitAll()
-                .and()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        ;
+                .anyRequest().permitAll() // Allows all other requests
+            .and()
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
     }
