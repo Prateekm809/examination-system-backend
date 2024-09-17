@@ -9,6 +9,8 @@ import com.project.examportalbackend.repository.RoleRepository;
 import com.project.examportalbackend.repository.UserRepository;
 import com.project.examportalbackend.services.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -43,13 +45,16 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @Autowired
+    private JavaMailSender mailSender; // Inject JavaMailSender
+
     @Override
     public User registerUserService(User user) throws Exception {
         // Check for existing username
         if (userRepository.findByUsername(user.getUsername()) != null) {
             throw new Exception("Username already exists");
         }
-        
+
         // Check for existing email
         if (userRepository.findByEmail(user.getEmail()) != null) {
             throw new Exception("Email already exists");
@@ -60,12 +65,23 @@ public class AuthServiceImpl implements AuthService {
             throw new Exception("Phone number already exists");
         }
 
+        // Set the role for the user
         Role role = roleRepository.findById("USER").orElse(null);
         Set<Role> userRoles = new HashSet<>();
         userRoles.add(role);
         user.setRoles(userRoles);
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        return userRepository.save(user);
+
+        // Encrypt and set the password
+        String rawPassword = user.getPassword(); // Keep the raw password for the email
+        user.setPassword(passwordEncoder.encode(rawPassword));
+
+        // Save the user in the database
+        User savedUser = userRepository.save(user);
+
+        // Send welcome email after successful registration
+        sendWelcomeEmail(user.getEmail(), user.getUsername(), rawPassword);
+
+        return savedUser;
     }
 
     public LoginResponse loginUserService(LoginRequest loginRequest) throws Exception {
@@ -74,11 +90,11 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             user = userRepository.findByEmail(loginRequest.getUsername());
         }
-        
+
         if (user == null) {
             throw new Exception("User not found");
         }
-        
+
         authenticate(user.getUsername(), loginRequest.getPassword());
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
         String token = jwtUtil.generateToken(userDetails);
@@ -93,5 +109,17 @@ public class AuthServiceImpl implements AuthService {
         } catch (BadCredentialsException e) {
             throw new Exception("INVALID_CREDENTIALS", e);
         }
+    }
+
+    // Method to send the welcome email
+    private void sendWelcomeEmail(String toEmail, String username, String rawPassword) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Welcome to Exam Portal");
+        message.setText("Dear " + username + ",\n\nWelcome to Exam Portal! "
+                + "Here are your login details:\n\nUsername: " + username + "\nPassword: " + rawPassword 
+                + "\n\nPlease keep your credentials secure.\n\nBest Regards,\nExam Portal Team");
+        mailSender.send(message);
+        System.out.println("Sent welcome email to: " + toEmail);
     }
 }
