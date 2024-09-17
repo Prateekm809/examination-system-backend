@@ -14,50 +14,75 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
 public class AuthServiceImpl implements AuthService {
 
     @Autowired
-    RoleRepository roleRepository;
+    private RoleRepository roleRepository;
 
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
+
     @Autowired
     private PasswordEncoder passwordEncoder;
+
     @Autowired
-    private UserDetailsServiceImpl userDetailsServiceImpl;
+    private UserDetailsService userDetailsService;
+
     @Autowired
     private JwtUtil jwtUtil;
+
     @Autowired
     private AuthenticationManager authenticationManager;
 
     @Override
     public User registerUserService(User user) throws Exception {
-        User temp = userRepository.findByUsername(user.getUsername());
-        if (temp != null) {
-            throw new Exception("User Already Exists");
-        } else {
-            Role role = roleRepository.findById("USER").isPresent() ? roleRepository.findById("USER").get() : null;
-            Set<Role> userRoles = new HashSet<>();
-            userRoles.add(role);
-            user.setRoles(userRoles);
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-            return userRepository.save(user);
+        // Check for existing username
+        if (userRepository.findByUsername(user.getUsername()) != null) {
+            throw new Exception("Username already exists");
         }
+        
+        // Check for existing email
+        if (userRepository.findByEmail(user.getEmail()) != null) {
+            throw new Exception("Email already exists");
+        }
+
+        // Check for existing phone number
+        if (userRepository.findByPhoneNumber(user.getPhoneNumber()) != null) {
+            throw new Exception("Phone number already exists");
+        }
+
+        Role role = roleRepository.findById("USER").orElse(null);
+        Set<Role> userRoles = new HashSet<>();
+        userRoles.add(role);
+        user.setRoles(userRoles);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        return userRepository.save(user);
     }
 
     public LoginResponse loginUserService(LoginRequest loginRequest) throws Exception {
-
-        authenticate(loginRequest.getUsername(), loginRequest.getPassword());
-        UserDetails userDetails = userDetailsServiceImpl.loadUserByUsername(loginRequest.getUsername());
+        // Try to find user by username or email
+        User user = userRepository.findByUsername(loginRequest.getUsername());
+        if (user == null) {
+            user = userRepository.findByEmail(loginRequest.getUsername());
+        }
+        
+        if (user == null) {
+            throw new Exception("User not found");
+        }
+        
+        authenticate(user.getUsername(), loginRequest.getPassword());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
         String token = jwtUtil.generateToken(userDetails);
-        return new LoginResponse(userRepository.findByUsername(loginRequest.getUsername()), token);
+        return new LoginResponse(user, token);
     }
 
     private void authenticate(String username, String password) throws Exception {

@@ -39,7 +39,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-    
         http.cors();
         http.csrf().disable()
                 .authorizeRequests()
@@ -47,6 +46,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // Publicly accessible endpoints
                 .antMatchers("/api/register").permitAll()
                 .antMatchers("/api/login").permitAll()
+                .antMatchers("/api/send-reset-code").permitAll() 
+                .antMatchers("/api/reset-password").permitAll()
+                 // Explicitly permit access to this endpoint
                 .antMatchers("/api/statistics/total").permitAll()  // Allow access to statistics endpoint
     
                 // Restricted endpoints for specific roles

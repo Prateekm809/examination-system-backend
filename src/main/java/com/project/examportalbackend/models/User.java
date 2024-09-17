@@ -16,12 +16,12 @@ import java.util.Set;
 @Setter
 @ToString
 @Entity
-@Table(name = "users") //annotations
+@Table(name = "users")
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
-    private long userId;  // field21
+    private long userId;
 
     @Column(name = "first_name")
     private String firstName;
@@ -30,12 +30,15 @@ public class User implements UserDetails {
     private String lastName;
 
     @Column(name = "username", unique = true)
-    private String username;
+    private String username; // Assuming username is used as email
+
+    @Column(name = "email", unique = true,nullable = false) // Add email field
+    private String email;
 
     @Column(name = "password")
     private String password;
 
-    @Column(name = "phone_number")
+    @Column(name = "phone_number", unique = true) // Add phone number field
     private String phoneNumber;
 
     @Column(name = "is_active")
