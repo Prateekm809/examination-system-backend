@@ -1,6 +1,7 @@
 package com.project.examportalbackend.services.implementation;
 
 import com.project.examportalbackend.configurations.JwtUtil;
+import com.project.examportalbackend.exceptions.UserAlreadyExistsException;
 import com.project.examportalbackend.models.LoginRequest;
 import com.project.examportalbackend.models.LoginResponse;
 import com.project.examportalbackend.models.Role;
@@ -21,7 +22,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -49,24 +49,24 @@ public class AuthServiceImpl implements AuthService {
     private JavaMailSender mailSender; // Inject JavaMailSender
 
     @Override
-    public User registerUserService(User user) throws Exception {
+    public User registerUserService(User user) throws UserAlreadyExistsException {
         // Check for existing username
         if (userRepository.findByUsername(user.getUsername()) != null) {
-            throw new Exception("Username already exists");
+            throw new UserAlreadyExistsException("Username already exists");
         }
 
         // Check for existing email
         if (userRepository.findByEmail(user.getEmail()) != null) {
-            throw new Exception("Email already exists");
+            throw new UserAlreadyExistsException("Email already exists");
         }
 
         // Check for existing phone number
         if (userRepository.findByPhoneNumber(user.getPhoneNumber()) != null) {
-            throw new Exception("Phone number already exists");
+            throw new UserAlreadyExistsException("Phone number already exists");
         }
 
         // Set the role for the user
-        Role role = roleRepository.findById("USER").orElse(null);
+        Role role = roleRepository.findById("USER").orElseThrow(() -> new RuntimeException("Role not found"));
         Set<Role> userRoles = new HashSet<>();
         userRoles.add(role);
         user.setRoles(userRoles);
@@ -84,6 +84,7 @@ public class AuthServiceImpl implements AuthService {
         return savedUser;
     }
 
+    @Override
     public LoginResponse loginUserService(LoginRequest loginRequest) throws Exception {
         // Try to find user by username or email
         User user = userRepository.findByUsername(loginRequest.getUsername());

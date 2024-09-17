@@ -30,7 +30,7 @@ public class ForgotPasswordController {
 
         return codeSent
                 ? ResponseEntity.ok("Password reset code sent successfully")
-                : ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Failed to send reset code. Please try again.");
+                : ResponseEntity.status(HttpStatus.NOT_FOUND).body("User with the provided email not found");
     }
 
     @PostMapping("/reset-password")
