@@ -12,7 +12,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**") // Allow CORS for all endpoints
                 .allowedOrigins(
-                    "https://examination-system-frontend.vercel.app",
+                    "${FRONTEND_URL}",
                     "http://localhost:3000" // Allow localhost for development
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Allow these HTTP methods
